@@ -339,13 +339,33 @@
     editor.focus();
 
     // Build edit tag badges
-    const editTagsContainer = document.getElementById('edit-tags');
-    editTagsContainer.innerHTML = '';
-    (noteData.tags || []).forEach(tag => {
-      editTagsContainer.insertBefore(buildEditBadge(tag), editTagsContainer.lastChild);
-    });
+    // const editTagsContainer = document.getElementById('edit-tags');
+    // editTagsContainer.innerHTML = '';
+    //(noteData.tags || []).forEach(tag => {
+    //   editTagsContainer.insertBefore(buildEditBadge(tag), editTagsContainer.lastChild);
+    // });
     // Re-append tag input
+    // const tagInput = document.getElementById('tag-input');
+    // editTagsContainer.appendChild(tagInput);
+    // tagInput.value = '';
+
+    const editTagsContainer = document.getElementById('edit-tags');
+
+    // Save the input first
     const tagInput = document.getElementById('tag-input');
+
+    // Remove it temporarily
+    tagInput.remove();
+
+    // Clear only the badges
+    editTagsContainer.innerHTML = '';
+
+    // Add badges back
+    (noteData.tags || []).forEach(tag => {
+        editTagsContainer.appendChild(buildEditBadge(tag));
+    });
+
+    // Put the input back
     editTagsContainer.appendChild(tagInput);
     tagInput.value = '';
 
@@ -454,6 +474,10 @@
   // ─── Save changes (PATCH) ─────────────────────────────────────────────────────
 
   async function saveNote() {
+    async function saveNote() {
+    console.log("saveNote() called");
+    }
+
     const saveBtn = document.getElementById('btn-save');
     setButtonLoading(saveBtn, true, 'Save Changes');
     document.getElementById('save-error').classList.add('hidden');
