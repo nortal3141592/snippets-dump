@@ -1,0 +1,300 @@
+{% extends "layout.html" %}
+
+{# Hide the navbar on the login page #}
+{% block navbar %}{% endblock %}
+
+{% block title %}snippets-dump — sign in{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Login page layout ───────────────────────────────────────── */
+  .login-root {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: #04080f;
+  }
+
+  /* ── Card ────────────────────────────────────────────────────── */
+  .login-card {
+    width: 100%;
+    max-width: 400px;
+    background: #ffe9ce;
+    color: #04080f;
+    border-radius: 6px;
+    padding: 2.75rem 2.5rem 2.25rem;
+    box-shadow:
+      0 0 0 1px rgba(155, 150, 225, 0.18),
+      0 8px 40px rgba(0, 0, 0, 0.55);
+  }
+
+  /* ── Card header ─────────────────────────────────────────────── */
+  .login-logo {
+    font-size: 2.1rem;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    color: #04080f;
+    margin: 0 0 0.3rem;
+    line-height: 1;
+  }
+  .login-tagline {
+    font-size: 0.75rem;
+    color: rgba(4, 8, 15, 0.45);
+    margin: 0 0 2.25rem;
+    font-weight: 400;
+  }
+
+  /* ── Form fields ─────────────────────────────────────────────── */
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+    margin-bottom: 1.6rem;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .field label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(4, 8, 15, 0.6);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .field input {
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid rgba(4, 8, 15, 0.22);
+    color: #04080f;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88rem;
+    padding: 0.4rem 0.1rem;
+    transition: border-color 0.18s;
+    width: 100%;
+  }
+  .field input::placeholder {
+    color: rgba(4, 8, 15, 0.3);
+  }
+  .field input:focus {
+    outline: none;
+    border-bottom-color: #3777ff;
+  }
+  .field input:focus-visible {
+    /* override global focus ring — bottom-border is enough on cream */
+    outline: none;
+  }
+
+  /* ── Submit button ───────────────────────────────────────────── */
+  .login-btn {
+    width: 100%;
+    padding: 0.65rem 1rem;
+    background: #3777ff;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.12s, opacity 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    letter-spacing: 0.02em;
+  }
+  .login-btn:hover:not(:disabled) { background: #255de0; }
+  .login-btn:active:not(:disabled) { transform: scale(0.98); }
+  .login-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  /* Spinner on cream card uses dark variant */
+  .login-btn .spinner {
+    border-color: rgba(255,255,255,0.25);
+    border-top-color: #ffffff;
+  }
+
+  /* ── Inline error ────────────────────────────────────────────── */
+  .login-error {
+    display: none;
+    background: #ffb5c2;
+    color: #04080f;
+    font-size: 0.77rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1.1rem;
+    line-height: 1.45;
+  }
+  .login-error.visible { display: block; }
+
+  /* ── Footer link ─────────────────────────────────────────────── */
+  .login-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.75rem;
+    color: rgba(4, 8, 15, 0.45);
+  }
+  .login-footer a {
+    color: #3777ff;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+  .login-footer a:hover { color: #255de0; text-decoration: underline; }
+
+  /* ── Divider ─────────────────────────────────────────────────── */
+  .card-divider {
+    height: 1px;
+    background: rgba(4, 8, 15, 0.1);
+    margin: 2rem 0 1.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-root">
+  <div class="login-card">
+
+    <!-- Header -->
+    <p class="login-logo">snippets-dump</p>
+    <p class="login-tagline">your thoughts, wherever you left them.</p>
+
+    <!-- Inline error -->
+    <div class="login-error" id="login-error" role="alert"></div>
+
+    <!-- Form -->
+    <div class="field-group">
+      <div class="field">
+        <label for="login-email">email</label>
+        <input
+          id="login-email"
+          type="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+          required
+        />
+      </div>
+      <div class="field">
+        <label for="login-password">password</label>
+        <input
+          id="login-password"
+          type="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+    </div>
+
+    <button class="login-btn" id="login-btn" type="button">
+      sign in
+    </button>
+
+    <div class="card-divider"></div>
+
+    <p class="login-footer">
+      no account yet?&nbsp;
+      <a href="/register">create one</a>
+    </p>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── If already authenticated, skip straight to the app ──────────
+  (function () {
+    if (localStorage.getItem('access_token')) {
+      window.location.replace('/');
+    }
+  })();
+
+  // ── DOM refs ─────────────────────────────────────────────────────
+  const emailInput    = document.getElementById('login-email');
+  const passwordInput = document.getElementById('login-password');
+  const loginBtn      = document.getElementById('login-btn');
+  const errorBox      = document.getElementById('login-error');
+
+  // ── Helpers ───────────────────────────────────────────────────────
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.classList.add('visible');
+  }
+  function hideError() {
+    errorBox.textContent = '';
+    errorBox.classList.remove('visible');
+  }
+
+  // ── Submit handler ────────────────────────────────────────────────
+  async function handleLogin() {
+    hideError();
+
+    const email    = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+      showError('Please fill in both fields.');
+      return;
+    }
+
+    const restore = setButtonLoading(loginBtn, 'signing in...');
+
+    try {
+      // API expects `username` (the email) + `password` as form-urlencoded
+      const body = new URLSearchParams();
+      body.append('username', email);   // field name is "username" per API contract
+      body.append('password', password);
+
+      const res = await fetch('/api/users/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('access_token', data.access_token);
+        window.location.replace('/');
+        return; // don't restore button — navigating away
+      }
+
+      // Handle known error shapes
+      if (res.status === 401 || res.status === 400) {
+        showError('Incorrect email or password.');
+      } else {
+        let detail = 'Something went wrong. Please try again.';
+        try {
+          const err = await res.json();
+          if (err.detail) detail = err.detail;
+        } catch { /* unparseable body — use default */ }
+        showError(detail);
+      }
+
+    } catch (err) {
+      showError('Network error — check your connection and try again.');
+      console.error('Login error:', err);
+    } finally {
+      restore();
+    }
+  }
+
+  // ── Event listeners ───────────────────────────────────────────────
+  loginBtn.addEventListener('click', handleLogin);
+
+  // Allow submitting with Enter from either input
+  [emailInput, passwordInput].forEach((el) => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleLogin();
+    });
+  });
+
+  // Clear error as soon as user starts editing
+  [emailInput, passwordInput].forEach((el) => {
+    el.addEventListener('input', hideError);
+  });
+</script>
+{% endblock %}

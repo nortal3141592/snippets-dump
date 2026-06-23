@@ -1,0 +1,365 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="min-h-screen" style="background-color: #04080f; font-family: 'JetBrains Mono', 'Courier New', monospace;">
+  <div class="max-w-2xl mx-auto px-4 py-12">
+
+    <!-- Loading state -->
+    <div id="loading-state" class="flex items-center justify-center py-24">
+      <div class="text-center">
+        <div class="inline-block w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mb-4"
+             style="border-color: #3777ff; border-top-color: transparent;"></div>
+        <p style="color: #9b96e1; font-size: 0.875rem;">loading profile...</p>
+      </div>
+    </div>
+
+    <!-- Profile content (hidden until loaded) -->
+    <div id="profile-content" class="hidden">
+
+      <!-- ── Avatar + identity ─────────────────────────────────────── -->
+      <div class="flex flex-col items-center mb-10">
+        <div id="avatar"
+             class="flex items-center justify-center rounded-full mb-4 select-none"
+             style="width: 96px; height: 96px; background-color: #9b96e1; color: #04080f;
+                    font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em;">
+        </div>
+        <h1 id="display-username"
+            class="text-2xl font-bold mb-1"
+            style="color: #ffe9ce;">
+        </h1>
+        <p id="display-email"
+           style="color: #9b96e1; font-size: 0.85rem;">
+        </p>
+      </div>
+
+      <!-- ── Stats ─────────────────────────────────────────────────── -->
+      <div class="grid grid-cols-2 gap-4 mb-10">
+        <div class="rounded-xl px-6 py-5" style="background-color: #ffe9ce;">
+          <p style="color: #04080f; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6;" class="mb-1">Total Notes</p>
+          <p id="stat-notes" class="text-4xl font-bold" style="color: #04080f;">—</p>
+        </div>
+        <div class="rounded-xl px-6 py-5" style="background-color: #ffcfc8;">
+          <p style="color: #04080f; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6;" class="mb-1">Unique Tags</p>
+          <p id="stat-tags" class="text-4xl font-bold" style="color: #04080f;">—</p>
+        </div>
+      </div>
+
+      <!-- ── Edit profile ───────────────────────────────────────────── -->
+      <div class="rounded-xl p-6 mb-6" style="background-color: #ffcfc8;">
+        <h2 class="text-sm font-bold mb-5" style="color: #04080f; letter-spacing: 0.05em; text-transform: uppercase;">Edit Profile</h2>
+
+        <div class="space-y-4 mb-5">
+          <div>
+            <label for="input-username"
+                   class="block text-xs mb-1.5"
+                   style="color: #04080f; opacity: 0.6; letter-spacing: 0.05em; text-transform: uppercase;">
+              Username
+            </label>
+            <input id="input-username"
+                   type="text"
+                   class="w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-150"
+                   style="background-color: #04080f; color: #ffe9ce; border: 1px solid #9b96e1;
+                          font-family: 'JetBrains Mono', 'Courier New', monospace;"
+            />
+          </div>
+          <div>
+            <label for="input-email"
+                   class="block text-xs mb-1.5"
+                   style="color: #04080f; opacity: 0.6; letter-spacing: 0.05em; text-transform: uppercase;">
+              Email
+            </label>
+            <input id="input-email"
+                   type="email"
+                   class="w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all duration-150"
+                   style="background-color: #04080f; color: #ffe9ce; border: 1px solid #9b96e1;
+                          font-family: 'JetBrains Mono', 'Courier New', monospace;"
+            />
+          </div>
+        </div>
+
+        <!-- Edit error / success -->
+        <div id="edit-error" class="hidden mb-4 px-4 py-2.5 rounded-lg text-xs"
+             style="background-color: #1a0808; color: #ffb5c2; border: 1px solid #ffb5c2;"></div>
+        <div id="edit-success" class="hidden mb-4 px-4 py-2.5 rounded-lg text-xs"
+             style="background-color: #081a0f; color: #ffe9ce; border: 1px solid #9b96e1;"></div>
+
+        <button id="btn-save-profile"
+                class="px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 hover:opacity-80 active:scale-95"
+                style="background-color: #3777ff; color: #ffffff;">
+          Save Changes
+        </button>
+      </div>
+
+      <!-- ── Account actions ────────────────────────────────────────── -->
+      <div class="rounded-xl p-6" style="background-color: #ffe9ce;">
+        <h2 class="text-sm font-bold mb-5" style="color: #04080f; letter-spacing: 0.05em; text-transform: uppercase;">Account</h2>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button id="btn-logout"
+                  class="px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 hover:opacity-80 active:scale-95"
+                  style="background-color: #9b96e1; color: #04080f;">
+            Log Out
+          </button>
+          <button id="btn-delete-account"
+                  class="px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 hover:opacity-80 active:scale-95"
+                  style="background-color: #ffb5c2; color: #04080f;">
+            Delete Account
+          </button>
+        </div>
+
+        <!-- Delete confirmation -->
+        <div id="delete-confirm" class="hidden mt-5 p-4 rounded-lg border"
+             style="background-color: #04080f; border-color: #ffb5c2;">
+          <p style="color: #ffe9ce; font-size: 0.875rem;" class="mb-1">
+            This will permanently delete your account and all your notes.
+          </p>
+          <p style="color: #ffb5c2; font-size: 0.8rem;" class="mb-4">There's no going back.</p>
+          <div class="flex gap-3">
+            <button id="btn-confirm-delete"
+                    class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 hover:opacity-80"
+                    style="background-color: #ffb5c2; color: #04080f;">
+              Yes, delete everything
+            </button>
+            <button id="btn-confirm-cancel"
+                    class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 hover:opacity-80"
+                    style="background-color: #9b96e1; color: #04080f;">
+              Never mind
+            </button>
+          </div>
+          <div id="delete-error" class="hidden mt-3 text-xs" style="color: #ffb5c2;"></div>
+        </div>
+      </div>
+
+    </div><!-- /profile-content -->
+  </div><!-- /container -->
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<style>
+  #input-username:focus,
+  #input-email:focus {
+    border-color: #ffe156 !important;
+    outline: none;
+  }
+</style>
+
+<script>
+  // ─── Auth guard ──────────────────────────────────────────────────────────────
+  const token = localStorage.getItem('access_token');
+  if (!token) window.location.href = '/login';
+
+  // ─── State ───────────────────────────────────────────────────────────────────
+  let currentUser = null;
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+  function authHeaders() {
+    return {
+      'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+      'Content-Type': 'application/json'
+    };
+  }
+
+  function handle401(response) {
+    if (response.status === 401) {
+      localStorage.clear();
+      window.location.href = '/login';
+      return true;
+    }
+    return false;
+  }
+
+  function setButtonLoading(btn, loading, idleLabel) {
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Saving...' : idleLabel;
+    btn.style.opacity = loading ? '0.6' : '1';
+  }
+
+  function showEditError(msg) {
+    const el = document.getElementById('edit-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    document.getElementById('edit-success').classList.add('hidden');
+  }
+
+  function showEditSuccess(msg) {
+    const el = document.getElementById('edit-success');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    document.getElementById('edit-error').classList.add('hidden');
+    setTimeout(() => el.classList.add('hidden'), 4000);
+  }
+
+  // ─── Render profile ───────────────────────────────────────────────────────────
+
+  function renderProfile(user) {
+    const firstLetter = (user.username || '?')[0].toUpperCase();
+    document.getElementById('avatar').textContent = firstLetter;
+    document.getElementById('display-username').textContent = user.username;
+    document.getElementById('display-email').textContent = user.email;
+    document.getElementById('input-username').value = user.username;
+    document.getElementById('input-email').value = user.email;
+  }
+
+  function renderStats(notes) {
+    const totalNotes = notes.length;
+    const uniqueTags = new Set(
+      notes.flatMap(n => (n.tags || []).map(t => t.tagname.toLowerCase()))
+    ).size;
+
+    document.getElementById('stat-notes').textContent = totalNotes;
+    document.getElementById('stat-tags').textContent = uniqueTags;
+  }
+
+  // ─── Load data ────────────────────────────────────────────────────────────────
+
+  async function loadProfile() {
+    try {
+      // Fire both requests in parallel
+      const [userResp, notesResp] = await Promise.all([
+        fetch('/api/users/me', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        }),
+        fetch('/api/notes', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        })
+      ]);
+
+      if (handle401(userResp) || handle401(notesResp)) return;
+
+      if (!userResp.ok) {
+        console.error('Failed to load user profile');
+        return;
+      }
+
+      currentUser = await userResp.json();
+      const notes = notesResp.ok ? await notesResp.json() : [];
+
+      renderProfile(currentUser);
+      renderStats(notes);
+
+      document.getElementById('loading-state').classList.add('hidden');
+      document.getElementById('profile-content').classList.remove('hidden');
+
+    } catch (e) {
+      document.getElementById('loading-state').innerHTML =
+        `<p style="color: #ffb5c2; font-size: 0.9rem;">Failed to load profile. Check your connection.</p>`;
+    }
+  }
+
+  // ─── Save profile ─────────────────────────────────────────────────────────────
+
+  async function saveProfile() {
+    const saveBtn = document.getElementById('btn-save-profile');
+    const username = document.getElementById('input-username').value.trim();
+    const email = document.getElementById('input-email').value.trim();
+
+    document.getElementById('edit-error').classList.add('hidden');
+    document.getElementById('edit-success').classList.add('hidden');
+
+    if (!username) { showEditError('Username cannot be empty.'); return; }
+    if (!email)    { showEditError('Email cannot be empty.'); return; }
+
+    setButtonLoading(saveBtn, true, 'Save Changes');
+
+    try {
+      const resp = await fetch(`/api/users/${currentUser.id}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ username, email })
+      });
+
+      if (handle401(resp)) return;
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        showEditError(err.detail || 'Failed to update profile.');
+        return;
+      }
+
+      const updated = await resp.json();
+      currentUser = { ...currentUser, ...updated };
+
+      // Refresh displayed identity
+      document.getElementById('avatar').textContent = (currentUser.username || '?')[0].toUpperCase();
+      document.getElementById('display-username').textContent = currentUser.username;
+      document.getElementById('display-email').textContent = currentUser.email;
+
+      showEditSuccess('Profile updated successfully.');
+    } catch (e) {
+      showEditError('Network error. Could not save changes.');
+    } finally {
+      setButtonLoading(saveBtn, false, 'Save Changes');
+    }
+  }
+
+  // ─── Delete account ───────────────────────────────────────────────────────────
+
+  async function deleteAccount() {
+    const confirmBtn = document.getElementById('btn-confirm-delete');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Deleting...';
+    confirmBtn.style.opacity = '0.6';
+
+    document.getElementById('delete-error').classList.add('hidden');
+
+    try {
+      const resp = await fetch(`/api/users/${currentUser.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+      });
+
+      if (handle401(resp)) return;
+
+      if (!resp.ok && resp.status !== 204) {
+        const err = await resp.json().catch(() => ({}));
+        const deleteErr = document.getElementById('delete-error');
+        deleteErr.textContent = err.detail || 'Failed to delete account. Try again.';
+        deleteErr.classList.remove('hidden');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Yes, delete everything';
+        confirmBtn.style.opacity = '1';
+        return;
+      }
+
+      localStorage.clear();
+      window.location.href = '/login';
+
+    } catch (e) {
+      const deleteErr = document.getElementById('delete-error');
+      deleteErr.textContent = 'Network error. Could not delete account.';
+      deleteErr.classList.remove('hidden');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Yes, delete everything';
+      confirmBtn.style.opacity = '1';
+    }
+  }
+
+  // ─── Event listeners ──────────────────────────────────────────────────────────
+
+  document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
+
+  document.getElementById('btn-logout').addEventListener('click', () => {
+    localStorage.clear();
+    window.location.href = '/login';
+  });
+
+  document.getElementById('btn-delete-account').addEventListener('click', () => {
+    document.getElementById('delete-confirm').classList.remove('hidden');
+    document.getElementById('btn-delete-account').classList.add('hidden');
+  });
+
+  document.getElementById('btn-confirm-delete').addEventListener('click', deleteAccount);
+
+  document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
+    document.getElementById('delete-confirm').classList.add('hidden');
+    document.getElementById('btn-delete-account').classList.remove('hidden');
+    document.getElementById('delete-error').classList.add('hidden');
+  });
+
+  // ─── Boot ─────────────────────────────────────────────────────────────────────
+  loadProfile();
+</script>
+{% endblock %}

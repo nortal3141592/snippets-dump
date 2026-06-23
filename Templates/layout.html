@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}snippets-dump{% endblock %}</title>
+
+  <!-- JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'bg-primary':       '#04080f',
+            'bg-secondary':     '#ffe9ce',
+            'bg-peach':         '#ffcfc8',
+            'accent':           '#3777ff',
+            'accent-soft':      '#9b96e1',
+            'highlight':        '#ffbe86',
+            'highlight-gold':   '#ffd06e',
+            'highlight-bright': '#ffe156',
+            'cream':            '#ffe9ce',
+            'ink':              '#04080f',
+            'danger':           '#ffb5c2',
+          },
+          fontFamily: {
+            mono: ['"JetBrains Mono"', '"Courier New"', 'monospace'],
+          },
+          borderRadius: {
+            'sm': '3px',
+            DEFAULT: '4px',
+            'md': '6px',
+            'lg': '8px',
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- CodeMirror 5 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+
+  <style>
+    /* ── Root resets ─────────────────────────────────────────────── */
+    *, *::before, *::after {
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #04080f;
+      color: #ffe9ce;
+      min-height: 100vh;
+    }
+    ::selection {
+      background: rgba(55, 119, 255, 0.28);
+    }
+
+    /* ── Scrollbar ───────────────────────────────────────────────── */
+    ::-webkit-scrollbar        { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track  { background: #04080f; }
+    ::-webkit-scrollbar-thumb  { background: #9b96e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #ffe9ce; }
+
+    /* ── Focus rings ─────────────────────────────────────────────── */
+    input:focus-visible,
+    textarea:focus-visible,
+    button:focus-visible {
+      outline: 2px solid #ffe156;
+      outline-offset: 2px;
+    }
+
+    /* ── Navbar ──────────────────────────────────────────────────── */
+    #main-nav {
+      background-color: #080d18;
+      border-bottom: 1px solid rgba(155, 150, 225, 0.45);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    #main-nav .nav-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    #nav-logo {
+      color: #ffe9ce;
+      text-decoration: none;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      flex-shrink: 0;
+      transition: color 0.15s;
+    }
+    #nav-logo:hover { color: #ffe156; }
+
+    /* Tag filter */
+    .nav-filter-wrap {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+    #tag-filter-input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(155, 150, 225, 0.3);
+      color: #ffe9ce;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      padding: 0.2rem 0.4rem;
+      width: 100%;
+      max-width: 260px;
+      transition: border-color 0.2s;
+    }
+    #tag-filter-input::placeholder { color: rgba(255, 233, 206, 0.35); }
+    #tag-filter-input:focus        {
+      outline: none;
+      border-bottom-color: #9b96e1;
+    }
+
+    /* Avatar & username */
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-shrink: 0;
+    }
+    #nav-username {
+      font-size: 0.75rem;
+      color: rgba(255, 233, 206, 0.55);
+      display: none;
+    }
+    #nav-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #9b96e1;
+      color: #04080f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-decoration: none;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.15s;
+      cursor: pointer;
+      user-select: none;
+    }
+    #nav-avatar:hover {
+      background: #ffe9ce;
+      transform: scale(1.06);
+    }
+
+    /* ── Toast system ────────────────────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      bottom: 1.75rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 0.5rem;
+      align-items: center;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 0.6rem 1.25rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      pointer-events: auto;
+      opacity: 1;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      transform: translateY(0);
+      white-space: nowrap;
+      max-width: 420px;
+      white-space: normal;
+      text-align: center;
+    }
+    .toast-error   { background: #ffb5c2; color: #04080f; }
+    .toast-success { background: #ffe9ce; color: #04080f; }
+    .toast-info    { background: #9b96e1; color: #04080f; }
+    .toast.fade-out {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    /* ── Loading spinner ─────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 233, 206, 0.25);
+      border-top-color: #ffe9ce;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Mobile nav ──────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      #main-nav .nav-inner {
+        height: auto;
+        padding: 0.6rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .nav-filter-wrap {
+        order: 3;
+        flex: 0 0 100%;
+        padding-bottom: 0.4rem;
+      }
+      #tag-filter-input { max-width: 100%; }
+      #nav-username { display: none !important; }
+    }
+
+    /* ── Page content padding ────────────────────────────────────── */
+    main { padding: 0; }
+
+    /* ── Buttons — shared base ───────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.45rem 1.1rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.12s, background 0.15s;
+      text-decoration: none;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .btn-primary  { background: #3777ff; color: #ffffff; }
+    .btn-primary:hover:not(:disabled) { background: #255de0; }
+    .btn-soft     { background: #9b96e1; color: #04080f; }
+    .btn-soft:hover:not(:disabled) { background: #b3afe9; }
+    .btn-danger   { background: #ffb5c2; color: #04080f; }
+    .btn-danger:hover:not(:disabled) { background: #ffa0b0; }
+
+    /* ── Tag badge ───────────────────────────────────────────────── */
+    .tag-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #ffbe86;
+      color: #04080f;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.15rem 0.5rem;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+    .tag-badge:hover { background: #ffd06e; }
+    .tag-badge .tag-remove {
+      background: none;
+      border: none;
+      color: #04080f;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+    }
+    .tag-badge .tag-remove:hover { opacity: 1; color: #800000; }
+  </style>
+
+  {% block head %}{% endblock %}
+</head>
+
+<body class="font-mono" style="background:#04080f; color:#ffe9ce; min-height:100vh;">
+
+  <!-- ── NAVBAR ────────────────────────────────────────────────────── -->
+  {% block navbar %}
+  <nav id="main-nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+
+      <!-- Left: logo -->
+      <a id="nav-logo" href="/" aria-label="snippets-dump — go to notes">snippets-dump</a>
+
+      <!-- Center: tag filter -->
+      <div class="nav-filter-wrap">
+        <input
+          id="tag-filter-input"
+          type="text"
+          placeholder="filter by tag..."
+          autocomplete="off"
+          aria-label="Filter notes by tag"
+        />
+      </div>
+
+      <!-- Right: username + avatar -->
+      <div class="nav-right">
+        <span id="nav-username" aria-hidden="true"></span>
+        <a
+          id="nav-avatar"
+          href="/profile"
+          aria-label="Go to profile"
+          title="Profile"
+        ></a>
+      </div>
+
+    </div>
+  </nav>
+  {% endblock %}
+
+  <!-- ── PAGE CONTENT ──────────────────────────────────────────────── -->
+  <main id="page-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ── TOAST CONTAINER ───────────────────────────────────────────── -->
+  <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ── CodeMirror 5 JS ───────────────────────────────────────────── -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"
+  ></script>
+
+  <!-- ── GLOBAL UTILITIES ──────────────────────────────────────────── -->
+  <script>
+    // ════════════════════════════════════════════════════════════════
+    //  AUTH HELPERS
+    // ════════════════════════════════════════════════════════════════
+
+    /** Return the stored JWT, or null. */
+    function getToken() {
+      return localStorage.getItem('access_token');
+    }
+
+    /** Wipe auth state and bounce to login. */
+    function handle401() {
+      localStorage.clear();
+      window.location.href = '/login';
+    }
+
+    /**
+     * Authenticated fetch wrapper.
+     * Automatically injects the Authorization header and handles 401.
+     * Returns the Response, or null if auth failed (redirect already fired).
+     */
+    async function authFetch(url, options = {}) {
+      const token = getToken();
+      if (!token) { handle401(); return null; }
+
+      options.headers = Object.assign({}, options.headers || {}, {
+        'Authorization': 'Bearer ' + token,
+      });
+
+      let res;
+      try {
+        res = await fetch(url, options);
+      } catch (err) {
+        console.error('Network error:', err);
+        throw err;
+      }
+
+      if (res.status === 401) { handle401(); return null; }
+      return res;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  TOAST
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * Show a transient toast notification.
+     * @param {string} message
+     * @param {'info'|'success'|'error'} type
+     * @param {number} duration  ms before fade-out
+     */
+    function showToast(message, type = 'info', duration = 3800) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const el = document.createElement('div');
+      el.className = 'toast toast-' + type;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.classList.add('fade-out');
+        setTimeout(() => el.remove(), 340);
+      }, duration);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  DATE FORMATTER
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * Format an ISO date string as "June 18, 2026".
+     * @param {string} iso
+     * @returns {string}
+     */
+    function formatDate(iso) {
+      if (!iso) return '';
+      try {
+        return new Date(iso).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+      } catch { return iso; }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  BUTTON LOADING STATE
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * Put a button into a loading state.
+     * Returns a restore function — call it to reset the button.
+     */
+    function setButtonLoading(btn, loadingText = 'working...') {
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>' + loadingText;
+      return () => {
+        btn.disabled = false;
+        btn.innerHTML = original;
+      };
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  NAVBAR INIT (runs only when navbar is present in DOM)
+    // ════════════════════════════════════════════════════════════════
+
+    (function initNavbar() {
+      const nav = document.getElementById('main-nav');
+      if (!nav) return;
+
+      // ── Populate user info ──────────────────────────────────────
+      (async () => {
+        const token = getToken();
+        if (!token) return; // auth guard on each page handles redirect
+
+        try {
+          const res = await authFetch('/api/users/me');
+          if (!res || !res.ok) return;
+          const user = await res.json();
+
+          const nameEl   = document.getElementById('nav-username');
+          const avatarEl = document.getElementById('nav-avatar');
+
+          if (nameEl) {
+            nameEl.textContent = user.username;
+            nameEl.style.display = 'block';
+          }
+          if (avatarEl) {
+            avatarEl.textContent = (user.username || '?').charAt(0).toUpperCase();
+          }
+        } catch (e) {
+          // Non-fatal: avatar stays blank
+        }
+      })();
+
+      // ── Tag filter ──────────────────────────────────────────────
+      const tagInput = document.getElementById('tag-filter-input');
+      if (!tagInput) return;
+
+      // Pre-fill from URL so the filter persists after redirect
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('tag')) {
+        tagInput.value = urlParams.get('tag');
+      }
+
+      tagInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const val = tagInput.value.trim();
+        window.location.href = val
+          ? '/?tag=' + encodeURIComponent(val)
+          : '/';
+      });
+    })();
+  </script>
+
+  {% block scripts %}{% endblock %}
+
+</body>
+</html>

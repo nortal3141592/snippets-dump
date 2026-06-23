@@ -1,0 +1,642 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="min-h-screen" style="background-color: #04080f; font-family: 'JetBrains Mono', 'Courier New', monospace;">
+
+  <!-- Note container -->
+  <div class="max-w-4xl mx-auto px-4 py-8">
+
+    <!-- Loading state -->
+    <div id="loading-state" class="flex items-center justify-center py-24">
+      <div class="text-center">
+        <div class="inline-block w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mb-4"
+             style="border-color: #3777ff; border-top-color: transparent;"></div>
+        <p style="color: #9b96e1; font-size: 0.875rem;">loading note...</p>
+      </div>
+    </div>
+
+    <!-- Error state -->
+    <div id="error-state" class="hidden flex items-center justify-center py-24">
+      <div class="text-center">
+        <p style="color: #ffb5c2; font-size: 1rem;" id="error-message">Failed to load note.</p>
+        <a href="/" style="color: #3777ff; font-size: 0.875rem;" class="mt-3 inline-block hover:underline">← back to notes</a>
+      </div>
+    </div>
+
+    <!-- Note content (hidden until loaded) -->
+    <div id="note-content" class="hidden">
+
+      <!-- Top bar: meta info + action buttons -->
+      <div class="flex items-start justify-between mb-6 gap-4 flex-wrap">
+        <div>
+          <p id="note-date" style="color: #9b96e1; font-size: 0.75rem; letter-spacing: 0.05em;"></p>
+        </div>
+        <!-- View mode buttons -->
+        <div id="view-actions" class="flex items-center gap-3">
+          <button id="btn-edit"
+            class="px-4 py-2 rounded text-sm font-medium transition-all duration-150 hover:opacity-80 active:scale-95"
+            style="background-color: #9b96e1; color: #04080f;">
+            Edit
+          </button>
+          <button id="btn-delete"
+            class="px-4 py-2 rounded text-sm font-medium transition-all duration-150 hover:opacity-80 active:scale-95"
+            style="background-color: #ffb5c2; color: #04080f;">
+            Delete
+          </button>
+        </div>
+        <!-- Edit mode buttons -->
+        <div id="edit-actions" class="hidden flex items-center gap-3">
+          <button id="btn-save"
+            class="px-4 py-2 rounded text-sm font-medium transition-all duration-150 hover:opacity-80 active:scale-95"
+            style="background-color: #3777ff; color: #ffffff;">
+            Save Changes
+          </button>
+          <button id="btn-cancel"
+            class="px-4 py-2 rounded text-sm font-medium transition-all duration-150 hover:opacity-80 active:scale-95"
+            style="background-color: #9b96e1; color: #04080f;">
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      <!-- Delete confirmation inline -->
+      <div id="delete-confirm" class="hidden mb-6 p-4 rounded-lg border"
+           style="background-color: #1a0f0f; border-color: #ffb5c2;">
+        <p style="color: #ffe9ce; font-size: 0.9rem;" class="mb-3">Delete this note permanently?</p>
+        <div class="flex gap-3">
+          <button id="btn-confirm-yes"
+            class="px-4 py-1.5 rounded text-sm font-medium transition-all duration-150 hover:opacity-80"
+            style="background-color: #ffb5c2; color: #04080f;">
+            Yes, delete
+          </button>
+          <button id="btn-confirm-no"
+            class="px-4 py-1.5 rounded text-sm font-medium transition-all duration-150 hover:opacity-80"
+            style="background-color: #9b96e1; color: #04080f;">
+            No, keep it
+          </button>
+        </div>
+      </div>
+
+      <!-- Heading: view mode -->
+      <h1 id="view-heading"
+          class="text-3xl md:text-4xl font-bold mb-6 leading-tight"
+          style="color: #ffe9ce; font-family: 'JetBrains Mono', 'Courier New', monospace;">
+      </h1>
+
+      <!-- Heading: edit mode -->
+      <input id="edit-heading"
+        type="text"
+        class="hidden w-full text-3xl md:text-4xl font-bold bg-transparent border-0 border-b-2 outline-none mb-6 pb-2 leading-tight"
+        style="color: #ffe9ce; border-color: #9b96e1; font-family: 'JetBrains Mono', 'Courier New', monospace;"
+        placeholder="Note heading..."
+      />
+
+      <!-- CodeMirror editor wrapper -->
+      <div id="editor-wrapper"
+           class="rounded-lg overflow-hidden mb-6"
+           style="border: 1px solid #1e1e2e; min-height: 420px;">
+        <textarea id="note-editor"></textarea>
+      </div>
+
+      <!-- Tags section -->
+      <div class="mb-8">
+        <p style="color: #9b96e1; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;" class="mb-2">Tags</p>
+
+        <!-- Tag display (view mode) -->
+        <div id="view-tags" class="flex flex-wrap gap-2">
+          <!-- populated by JS -->
+        </div>
+
+        <!-- Tag editor (edit mode) -->
+        <div id="edit-tags" class="hidden flex flex-wrap items-center gap-2">
+          <!-- tag badges populated by JS -->
+          <input id="tag-input"
+            type="text"
+            class="bg-transparent outline-none text-sm"
+            style="color: #ffe9ce; min-width: 140px; border-bottom: 1px solid #9b96e1; padding-bottom: 2px;"
+            placeholder="add tag, press enter"
+          />
+        </div>
+
+        <!-- Tag error -->
+        <p id="tag-error" class="hidden mt-2 text-xs" style="color: #ffb5c2;"></p>
+      </div>
+
+      <!-- Save error toast area -->
+      <div id="save-error" class="hidden mb-4 px-4 py-3 rounded-lg text-sm"
+           style="background-color: #1a0808; color: #ffb5c2; border: 1px solid #ffb5c2;">
+      </div>
+
+    </div><!-- /note-content -->
+  </div><!-- /container -->
+</div>
+
+<!-- Toast notification -->
+<div id="toast"
+     class="fixed bottom-6 right-6 px-5 py-3 rounded-lg text-sm hidden z-50 shadow-lg transition-all duration-300"
+     style="background-color: #1e1e2e; color: #ffe9ce; border: 1px solid #9b96e1;">
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<!-- CodeMirror CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<!-- CodeMirror JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+
+<style>
+  /* CodeMirror overrides to match app style */
+  .CodeMirror {
+    height: auto;
+    min-height: 420px;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    background-color: #1e1e2e !important;
+    color: #f8f8f2;
+    border-radius: 0.5rem;
+    padding: 8px 0;
+  }
+  .CodeMirror-scroll {
+    min-height: 420px;
+  }
+  .CodeMirror-gutters {
+    background-color: #1e1e2e !important;
+    border-right: 1px solid #2e2e3e !important;
+  }
+  .CodeMirror-linenumber {
+    color: #6272a4 !important;
+  }
+  .CodeMirror-cursor {
+    border-left-color: #f8f8f2 !important;
+  }
+  /* Focus ring for heading input */
+  #edit-heading:focus {
+    border-color: #ffe156 !important;
+    outline: none;
+  }
+  /* Tag input focus */
+  #tag-input:focus {
+    border-bottom-color: #ffe156 !important;
+    outline: none;
+  }
+</style>
+
+<script>
+  // ─── Constants ──────────────────────────────────────────────────────────────
+  const NOTE_ID = {{ note_id }};
+  const API_BASE = '/api';
+
+  // ─── State ───────────────────────────────────────────────────────────────────
+  let noteData = null;       // the fetched note object
+  let editor = null;         // CodeMirror instance
+  let isEditMode = false;
+
+  // ─── Auth guard ──────────────────────────────────────────────────────────────
+  const token = localStorage.getItem('access_token');
+  if (!token) window.location.href = '/login';
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+  function authHeaders() {
+    return {
+      'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+      'Content-Type': 'application/json'
+    };
+  }
+
+  function handle401(response) {
+    if (response.status === 401) {
+      localStorage.clear();
+      window.location.href = '/login';
+      return true;
+    }
+    return false;
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  function showToast(message, isError = false) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.style.borderColor = isError ? '#ffb5c2' : '#9b96e1';
+    toast.style.color = isError ? '#ffb5c2' : '#ffe9ce';
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 3000);
+  }
+
+  function showSaveError(msg) {
+    const el = document.getElementById('save-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 5000);
+  }
+
+  function setButtonLoading(btn, loading, label) {
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Saving...' : label;
+    btn.style.opacity = loading ? '0.6' : '1';
+  }
+
+  // ─── Tag badge builders ───────────────────────────────────────────────────────
+
+  /**
+   * Build a read-only tag badge element for view mode.
+   */
+  function buildViewBadge(tag) {
+    const span = document.createElement('span');
+    span.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
+    span.style.cssText = 'background-color: #ffbe86; color: #04080f;';
+    span.textContent = tag.tagname;
+    return span;
+  }
+
+  /**
+   * Build an edit-mode tag badge with an X button.
+   * Clicking X immediately calls DELETE /api/notes/{id}/tags/{tag_id}.
+   */
+  function buildEditBadge(tag) {
+    const span = document.createElement('span');
+    span.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium';
+    span.style.cssText = 'background-color: #ffbe86; color: #04080f;';
+    span.dataset.tagId = tag.id;
+
+    const label = document.createElement('span');
+    label.textContent = tag.tagname;
+
+    const xBtn = document.createElement('button');
+    xBtn.type = 'button';
+    xBtn.textContent = '×';
+    xBtn.className = 'ml-0.5 font-bold leading-none hover:opacity-70 transition-opacity';
+    xBtn.style.cssText = 'color: #ffb5c2; font-size: 1rem; line-height: 1; background: none; border: none; cursor: pointer; padding: 0;';
+    xBtn.title = `Remove tag "${tag.tagname}"`;
+
+    xBtn.addEventListener('click', async () => {
+      xBtn.disabled = true;
+      await removeTag(tag.id, span);
+    });
+
+    span.appendChild(label);
+    span.appendChild(xBtn);
+    return span;
+  }
+
+  // ─── Render note in VIEW mode ─────────────────────────────────────────────────
+
+  function renderViewMode() {
+    if (!noteData) return;
+
+    // Heading
+    document.getElementById('view-heading').textContent = noteData.heading;
+
+    // Date
+    document.getElementById('note-date').textContent = formatDate(noteData.date_created);
+
+    // Tags (view)
+    const viewTags = document.getElementById('view-tags');
+    viewTags.innerHTML = '';
+    if (noteData.tags && noteData.tags.length > 0) {
+      noteData.tags.forEach(tag => viewTags.appendChild(buildViewBadge(tag)));
+    } else {
+      const none = document.createElement('span');
+      none.style.cssText = 'color: #9b96e1; font-size: 0.75rem;';
+      none.textContent = 'no tags';
+      viewTags.appendChild(none);
+    }
+
+    // Show view elements, hide edit elements
+    document.getElementById('view-heading').classList.remove('hidden');
+    document.getElementById('edit-heading').classList.add('hidden');
+    document.getElementById('view-tags').classList.remove('hidden');
+    document.getElementById('edit-tags').classList.add('hidden');
+    document.getElementById('view-actions').classList.remove('hidden');
+    document.getElementById('edit-actions').classList.add('hidden');
+    document.getElementById('delete-confirm').classList.add('hidden');
+    document.getElementById('tag-error').classList.add('hidden');
+    document.getElementById('save-error').classList.add('hidden');
+  }
+
+  // ─── Enter EDIT mode ──────────────────────────────────────────────────────────
+
+  function enterEditMode() {
+    isEditMode = true;
+
+    // Pre-fill heading input
+    const headingInput = document.getElementById('edit-heading');
+    headingInput.value = noteData.heading;
+    headingInput.classList.remove('hidden');
+    document.getElementById('view-heading').classList.add('hidden');
+
+    // Make CodeMirror editable
+    editor.setOption('readOnly', false);
+    editor.getWrapperElement().style.cursor = 'text';
+    editor.focus();
+
+    // Build edit tag badges
+    const editTagsContainer = document.getElementById('edit-tags');
+    editTagsContainer.innerHTML = '';
+    (noteData.tags || []).forEach(tag => {
+      editTagsContainer.insertBefore(buildEditBadge(tag), editTagsContainer.lastChild);
+    });
+    // Re-append tag input
+    const tagInput = document.getElementById('tag-input');
+    editTagsContainer.appendChild(tagInput);
+    tagInput.value = '';
+
+    // Toggle visibility
+    document.getElementById('view-tags').classList.add('hidden');
+    document.getElementById('edit-tags').classList.remove('hidden');
+    document.getElementById('view-actions').classList.add('hidden');
+    document.getElementById('edit-actions').classList.remove('hidden');
+    document.getElementById('delete-confirm').classList.add('hidden');
+  }
+
+  // ─── Exit EDIT mode (cancel) ──────────────────────────────────────────────────
+
+  function exitEditMode() {
+    isEditMode = false;
+
+    // Reset editor to original body
+    editor.setValue(noteData.body || '');
+    editor.setOption('readOnly', true);
+    editor.getWrapperElement().style.cursor = 'default';
+
+    renderViewMode();
+  }
+
+  // ─── Tag API operations ───────────────────────────────────────────────────────
+
+  async function addTag(tagname) {
+    const tagInput = document.getElementById('tag-input');
+    const tagError = document.getElementById('tag-error');
+    tagError.classList.add('hidden');
+
+    if (!tagname.trim()) return;
+
+    // Check for duplicate
+    const existing = noteData.tags.find(t => t.tagname.toLowerCase() === tagname.trim().toLowerCase());
+    if (existing) {
+      tagError.textContent = `Tag "${tagname.trim()}" already exists.`;
+      tagError.classList.remove('hidden');
+      return;
+    }
+
+    tagInput.disabled = true;
+
+    try {
+      const resp = await fetch(`${API_BASE}/notes/${NOTE_ID}/tags`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ tagname: tagname.trim() })
+      });
+
+      if (handle401(resp)) return;
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        tagError.textContent = err.detail || 'Failed to add tag.';
+        tagError.classList.remove('hidden');
+        return;
+      }
+
+      const updatedNote = await resp.json();
+      // Find the new tag (last one added, or by name)
+      const newTag = updatedNote.tags.find(t => t.tagname.toLowerCase() === tagname.trim().toLowerCase());
+      if (newTag) {
+        noteData.tags = updatedNote.tags;
+        const editTagsContainer = document.getElementById('edit-tags');
+        editTagsContainer.insertBefore(buildEditBadge(newTag), tagInput);
+      }
+
+      tagInput.value = '';
+    } catch (e) {
+      tagError.textContent = 'Network error. Could not add tag.';
+      tagError.classList.remove('hidden');
+    } finally {
+      tagInput.disabled = false;
+      tagInput.focus();
+    }
+  }
+
+  async function removeTag(tagId, badgeEl) {
+    const tagError = document.getElementById('tag-error');
+    tagError.classList.add('hidden');
+
+    try {
+      const resp = await fetch(`${API_BASE}/notes/${NOTE_ID}/tags/${tagId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+      });
+
+      if (handle401(resp)) return;
+
+      if (!resp.ok && resp.status !== 204) {
+        tagError.textContent = 'Failed to remove tag.';
+        tagError.classList.remove('hidden');
+        return;
+      }
+
+      // Remove from noteData and DOM
+      noteData.tags = noteData.tags.filter(t => t.id !== tagId);
+      badgeEl.remove();
+    } catch (e) {
+      tagError.textContent = 'Network error. Could not remove tag.';
+      tagError.classList.remove('hidden');
+    }
+  }
+
+  // ─── Save changes (PATCH) ─────────────────────────────────────────────────────
+
+  async function saveNote() {
+    const saveBtn = document.getElementById('btn-save');
+    setButtonLoading(saveBtn, true, 'Save Changes');
+    document.getElementById('save-error').classList.add('hidden');
+
+    const heading = document.getElementById('edit-heading').value.trim();
+    const body = editor.getValue();
+
+    if (!heading) {
+      showSaveError('Heading cannot be empty.');
+      setButtonLoading(saveBtn, false, 'Save Changes');
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${API_BASE}/notes/${NOTE_ID}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ heading, body })
+      });
+
+      if (handle401(resp)) return;
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        showSaveError(err.detail || 'Failed to save note.');
+        setButtonLoading(saveBtn, false, 'Save Changes');
+        return;
+      }
+
+      const updated = await resp.json();
+      noteData = { ...noteData, ...updated };
+
+      // Sync tags from current state (tags were mutated live)
+      // noteData.tags is already up to date from live tag operations
+
+      isEditMode = false;
+      editor.setOption('readOnly', true);
+      editor.getWrapperElement().style.cursor = 'default';
+      renderViewMode();
+      showToast('Note saved.');
+    } catch (e) {
+      showSaveError('Network error. Could not save note.');
+    } finally {
+      setButtonLoading(saveBtn, false, 'Save Changes');
+    }
+  }
+
+  // ─── Delete note ──────────────────────────────────────────────────────────────
+
+  async function deleteNote() {
+    const yesBtn = document.getElementById('btn-confirm-yes');
+    yesBtn.disabled = true;
+    yesBtn.textContent = 'Deleting...';
+
+    try {
+      const resp = await fetch(`${API_BASE}/notes/${NOTE_ID}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+      });
+
+      if (handle401(resp)) return;
+
+      if (!resp.ok && resp.status !== 204) {
+        showToast('Failed to delete note.', true);
+        yesBtn.disabled = false;
+        yesBtn.textContent = 'Yes, delete';
+        document.getElementById('delete-confirm').classList.add('hidden');
+        return;
+      }
+
+      window.location.href = '/';
+    } catch (e) {
+      showToast('Network error. Could not delete note.', true);
+      yesBtn.disabled = false;
+      yesBtn.textContent = 'Yes, delete';
+      document.getElementById('delete-confirm').classList.add('hidden');
+    }
+  }
+
+  // ─── Load note from API ───────────────────────────────────────────────────────
+
+  async function loadNote() {
+    try {
+      const resp = await fetch(`${API_BASE}/notes/${NOTE_ID}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+      });
+
+      if (handle401(resp)) return;
+
+      if (!resp.ok) {
+        document.getElementById('loading-state').classList.add('hidden');
+        const errEl = document.getElementById('error-state');
+        errEl.classList.remove('hidden');
+        if (resp.status === 404) {
+          document.getElementById('error-message').textContent = 'Note not found.';
+        } else {
+          document.getElementById('error-message').textContent = 'Failed to load note.';
+        }
+        return;
+      }
+
+      noteData = await resp.json();
+
+      // Initialise CodeMirror
+      editor = CodeMirror.fromTextArea(document.getElementById('note-editor'), {
+        mode: 'null',          // plaintext — no syntax highlighting
+        theme: 'dracula',
+        lineNumbers: true,
+        lineWrapping: true,
+        readOnly: true,        // view mode by default
+        autofocus: false,
+        extraKeys: {
+          'Tab': (cm) => cm.replaceSelection('    ')
+        }
+      });
+
+      editor.setValue(noteData.body || '');
+      editor.getWrapperElement().style.cursor = 'default';
+
+      // Transition to note content
+      document.getElementById('loading-state').classList.add('hidden');
+      document.getElementById('note-content').classList.remove('hidden');
+
+
+        // Tell CodeMirror to recalculate its layout
+        requestAnimationFrame(() => {
+            editor.refresh();
+        });
+
+      renderViewMode();
+
+    } catch (e) {
+      document.getElementById('loading-state').classList.add('hidden');
+      const errEl = document.getElementById('error-state');
+      errEl.classList.remove('hidden');
+      document.getElementById('error-message').textContent = 'Network error. Could not load note.';
+    }
+  }
+
+  // ─── Event listeners ──────────────────────────────────────────────────────────
+
+  // Edit button
+  document.getElementById('btn-edit').addEventListener('click', () => {
+    enterEditMode();
+  });
+
+  // Cancel button
+  document.getElementById('btn-cancel').addEventListener('click', () => {
+    exitEditMode();
+  });
+
+  // Save button
+  document.getElementById('btn-save').addEventListener('click', () => {
+    saveNote();
+  });
+
+  // Delete button — show inline confirmation
+  document.getElementById('btn-delete').addEventListener('click', () => {
+    document.getElementById('delete-confirm').classList.remove('hidden');
+    document.getElementById('btn-delete').classList.add('hidden');
+  });
+
+  // Confirm delete: Yes
+  document.getElementById('btn-confirm-yes').addEventListener('click', () => {
+    deleteNote();
+  });
+
+  // Confirm delete: No
+  document.getElementById('btn-confirm-no').addEventListener('click', () => {
+    document.getElementById('delete-confirm').classList.add('hidden');
+    document.getElementById('btn-delete').classList.remove('hidden');
+  });
+
+  // Tag input: press Enter to add tag
+  document.getElementById('tag-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = e.target.value.trim();
+      if (val) addTag(val);
+    }
+  });
+
+  // ─── Boot ─────────────────────────────────────────────────────────────────────
+  loadNote();
+</script>
+{% endblock %}

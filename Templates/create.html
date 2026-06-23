@@ -1,0 +1,458 @@
+{% extends "layout.html" %}
+
+{% block title %}snippets-dump — new note{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Full-page flex layout ───────────────────────────────────── */
+  #page-content {
+    /* Override main's default so this page owns the full viewport */
+    display: flex;
+    flex-direction: column;
+  }
+
+  .create-layout {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 56px); /* 56px = navbar */
+    overflow: hidden;
+    background: #04080f;
+  }
+
+  /* ── Heading section ─────────────────────────────────────────── */
+  .heading-section {
+    flex-shrink: 0;
+    padding: 1.5rem 2rem 0;
+    background: #04080f;
+  }
+
+  .heading-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid rgba(255, 233, 206, 0.12);
+    color: #ffe9ce;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.45rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    padding: 0.3rem 0;
+    transition: border-color 0.2s;
+    outline: none;
+    line-height: 1.3;
+  }
+  .heading-input::placeholder {
+    color: rgba(255, 233, 206, 0.2);
+    font-weight: 400;
+  }
+  .heading-input:focus {
+    border-bottom-color: rgba(255, 233, 206, 0.35);
+  }
+  .heading-input.is-error {
+    border-bottom-color: #ffb5c2;
+  }
+
+  .heading-error {
+    font-size: 0.72rem;
+    color: #ffb5c2;
+    margin-top: 0.4rem;
+    min-height: 1rem;
+    visibility: hidden;
+  }
+  .heading-error.visible { visibility: visible; }
+
+  /* ── Editor section ──────────────────────────────────────────── */
+  .editor-section {
+    flex: 1;
+    min-height: 0; /* critical: allows CodeMirror to shrink in flex */
+    display: flex;
+    flex-direction: column;
+    margin-top: 1rem;
+    border-top: 1px solid rgba(155, 150, 225, 0.12);
+  }
+
+  #editor-mount {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* CodeMirror overrides */
+  #editor-mount .CodeMirror {
+    height: 100%;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 0.88rem;
+    line-height: 1.75;
+    padding: 0.75rem 0;
+    background: #04080f; /* blend with page — dracula bg swapped out */
+  }
+  #editor-mount .CodeMirror-scroll {
+    padding: 0 0.5rem;
+  }
+  /* Gutter matches page bg */
+  #editor-mount .CodeMirror-gutters {
+    background: #04080f;
+    border-right: 1px solid rgba(155, 150, 225, 0.1);
+  }
+  #editor-mount .CodeMirror-linenumber {
+    color: rgba(155, 150, 225, 0.35);
+    font-size: 0.75rem;
+    padding: 0 10px 0 6px;
+  }
+  /* Cursor */
+  #editor-mount .CodeMirror-cursor {
+    border-left-color: #ffe9ce;
+  }
+  /* Active line */
+  #editor-mount .CodeMirror-activeline-background {
+    background: rgba(255, 233, 206, 0.03);
+  }
+  /* Selection */
+  #editor-mount .CodeMirror-selected {
+    background: rgba(55, 119, 255, 0.22) !important;
+  }
+
+  /* ── Tag section ─────────────────────────────────────────────── */
+  .tag-section {
+    flex-shrink: 0;
+    border-top: 1px solid rgba(155, 150, 225, 0.12);
+    padding: 0.65rem 2rem;
+    background: #04080f;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    min-height: 50px;
+  }
+
+  #tags-badges {
+    display: contents; /* badges render inline in the flex row */
+  }
+
+  /* tag-badge from layout.html is reused; override remove btn colour */
+  .tag-section .tag-badge .tag-remove {
+    color: #7a0a1a;
+  }
+
+  .tag-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 233, 206, 0.15);
+    color: #ffe9ce;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.1rem 0.2rem;
+    min-width: 140px;
+    width: auto;
+    transition: border-color 0.18s;
+    outline: none;
+    flex-shrink: 0;
+  }
+  .tag-input::placeholder { color: rgba(255, 233, 206, 0.25); }
+  .tag-input:focus        { border-bottom-color: rgba(255, 233, 206, 0.45); }
+
+  /* ── Action bar ──────────────────────────────────────────────── */
+  .action-bar {
+    flex-shrink: 0;
+    border-top: 1px solid rgba(155, 150, 225, 0.12);
+    padding: 0.85rem 2rem;
+    background: #04080f;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .action-bar-left {
+    font-size: 0.68rem;
+    color: rgba(255, 233, 206, 0.2);
+    letter-spacing: 0.02em;
+  }
+
+  .action-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .cancel-btn {
+    padding: 0.5rem 1.1rem;
+    background: transparent;
+    border: 1px solid rgba(155, 150, 225, 0.4);
+    color: #9b96e1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+  }
+  .cancel-btn:hover { border-color: #9b96e1; color: #ffe9ce; }
+
+  .save-btn {
+    padding: 0.5rem 1.25rem;
+    background: #3777ff;
+    border: none;
+    color: #ffffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.12s, opacity 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .save-btn:hover:not(:disabled) { background: #255de0; }
+  .save-btn:active:not(:disabled) { transform: scale(0.97); }
+  .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .save-btn .spinner {
+    border-color: rgba(255,255,255,0.25);
+    border-top-color: #ffffff;
+    width: 12px; height: 12px;
+  }
+
+  /* ── Mobile adjustments ──────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .heading-section { padding: 1rem 1rem 0; }
+    .heading-input    { font-size: 1.1rem; }
+    .tag-section      { padding: 0.5rem 1rem; }
+    .action-bar       { padding: 0.75rem 1rem; }
+    .action-bar-left  { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="create-layout">
+
+  <!-- ── Heading ───────────────────────────────────────────────── -->
+  <div class="heading-section">
+    <input
+      id="heading-input"
+      class="heading-input"
+      type="text"
+      placeholder="Note heading..."
+      autocomplete="off"
+      maxlength="200"
+      aria-label="Note heading"
+    />
+    <div class="heading-error" id="heading-error">Heading is required.</div>
+  </div>
+
+  <!-- ── Editor ────────────────────────────────────────────────── -->
+  <div class="editor-section">
+    <div id="editor-mount"></div>
+  </div>
+
+  <!-- ── Tags ──────────────────────────────────────────────────── -->
+  <div class="tag-section" aria-label="Tags">
+    <div id="tags-badges"></div>
+    <input
+      id="tag-input"
+      class="tag-input"
+      type="text"
+      placeholder="add tag, press enter"
+      autocomplete="off"
+      maxlength="50"
+      aria-label="Add tag"
+    />
+  </div>
+
+  <!-- ── Action bar ────────────────────────────────────────────── -->
+  <div class="action-bar">
+    <span class="action-bar-left">⌘S to save</span>
+    <div class="action-bar-right">
+      <a href="/" class="cancel-btn">Cancel</a>
+      <button class="save-btn" id="save-btn">Save Note</button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Auth guard ────────────────────────────────────────────────────
+  (function () {
+    if (!getToken()) window.location.replace('/login');
+  })();
+
+  // ── DOM refs ──────────────────────────────────────────────────────
+  const headingInput  = document.getElementById('heading-input');
+  const headingError  = document.getElementById('heading-error');
+  const editorMount   = document.getElementById('editor-mount');
+  const tagsBadges    = document.getElementById('tags-badges');
+  const tagInput      = document.getElementById('tag-input');
+  const saveBtn       = document.getElementById('save-btn');
+
+  // ── CodeMirror init ───────────────────────────────────────────────
+  const editor = CodeMirror(editorMount, {
+    value:          '',
+    mode:           null,        // plaintext — no syntax highlighting
+    theme:          'dracula',   // loaded via CDN in layout.html
+    lineNumbers:    true,
+    lineWrapping:   true,
+    autofocus:      false,
+    tabSize:        2,
+    indentWithTabs: false,
+    cursorScrollMargin: 8,
+    extraKeys: {
+      // Don't let Tab get captured — allow natural focus movement
+      'Tab': false,
+    },
+  });
+
+  // Give CodeMirror a tick to measure its container before refreshing
+  setTimeout(() => editor.refresh(), 50);
+
+  // ── Tag state ─────────────────────────────────────────────────────
+  let tags = []; // array of lowercase strings
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,  '&amp;')
+      .replace(/</g,  '&lt;')
+      .replace(/>/g,  '&gt;')
+      .replace(/"/g,  '&quot;')
+      .replace(/'/g,  '&#39;');
+  }
+
+  function renderTagBadges() {
+    tagsBadges.innerHTML = tags.map((t, i) => `
+      <span class="tag-badge">
+        ${esc(t)}
+        <button
+          class="tag-remove"
+          data-index="${i}"
+          aria-label="Remove tag ${esc(t)}"
+          title="Remove"
+        >&times;</button>
+      </span>
+    `).join('');
+
+    tagsBadges.querySelectorAll('.tag-remove').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        tags.splice(parseInt(btn.dataset.index, 10), 1);
+        renderTagBadges();
+      });
+    });
+  }
+
+  function addTag(raw) {
+    const name = raw.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!name) return;
+    if (tags.includes(name)) {
+      // Duplicate — flash the existing badge briefly
+      const existing = [...tagsBadges.querySelectorAll('.tag-badge')]
+        .find(el => el.textContent.trim().startsWith(name));
+      if (existing) {
+        existing.style.background = '#ffd06e';
+        setTimeout(() => { existing.style.background = ''; }, 600);
+      }
+      return;
+    }
+    tags.push(name);
+    renderTagBadges();
+  }
+
+  // ── Tag input handler ─────────────────────────────────────────────
+  tagInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag(tagInput.value);
+      tagInput.value = '';
+    }
+    // Backspace on empty input removes last tag
+    if (e.key === 'Backspace' && tagInput.value === '' && tags.length > 0) {
+      tags.pop();
+      renderTagBadges();
+    }
+  });
+
+  // ── Heading validation ────────────────────────────────────────────
+  function setHeadingError(msg) {
+    headingInput.classList.add('is-error');
+    headingError.textContent = msg;
+    headingError.classList.add('visible');
+  }
+  function clearHeadingError() {
+    headingInput.classList.remove('is-error');
+    headingError.classList.remove('visible');
+  }
+
+  headingInput.addEventListener('input', clearHeadingError);
+
+  // ── Save handler ──────────────────────────────────────────────────
+  async function handleSave() {
+    clearHeadingError();
+
+    const heading = headingInput.value.trim();
+    const body    = editor.getValue();
+
+    // Client-side validation
+    if (!heading) {
+      setHeadingError('Heading is required.');
+      headingInput.focus();
+      return;
+    }
+
+    const restore = setButtonLoading(saveBtn, 'saving...');
+
+    try {
+      const res = await authFetch('/api/notes', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ heading, body, tags }),
+      });
+
+      if (!res) return; // 401 handled — redirect already fired
+
+      if (res.ok || res.status === 201) {
+        const note = await res.json();
+        // Navigate to the new note — replace so back button goes to /
+        window.location.replace('/notes/' + note.id);
+        return;
+      }
+
+      // API error
+      let detail = `Failed to save note (${res.status}).`;
+      try {
+        const err = await res.json();
+        if (err.detail) {
+          detail = Array.isArray(err.detail)
+            ? err.detail.map(e => e.msg).join(' ')
+            : String(err.detail);
+        }
+      } catch {}
+
+      showToast(detail, 'error');
+
+    } catch (err) {
+      console.error('Save error:', err);
+      showToast('Network error — note not saved. Check your connection.', 'error');
+    } finally {
+      restore();
+    }
+  }
+
+  // ── Event listeners ───────────────────────────────────────────────
+  saveBtn.addEventListener('click', handleSave);
+
+  // ⌘S / Ctrl+S from anywhere on the page
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault();
+      handleSave();
+    }
+  });
+
+  // Focus heading on load (after a tick so CodeMirror measures correctly)
+  setTimeout(() => headingInput.focus(), 60);
+</script>
+{% endblock %}

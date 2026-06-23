@@ -1,0 +1,492 @@
+{% extends "layout.html" %}
+
+{% block title %}snippets-dump{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Page shell ──────────────────────────────────────────────── */
+  .index-root {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 6rem; /* bottom pad clears FAB */
+  }
+
+  /* ── Filter indicator bar ────────────────────────────────────── */
+  .filter-bar {
+    display: none; /* shown via JS when ?tag= present */
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.76rem;
+    color: rgba(255, 233, 206, 0.45);
+    flex-wrap: wrap;
+  }
+  .filter-bar.active { display: flex; }
+  .filter-bar-label { letter-spacing: 0.02em; }
+  .filter-bar-tag {
+    background: #ffbe86;
+    color: #04080f;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+  }
+  .filter-bar-clear {
+    background: none;
+    border: none;
+    color: #9b96e1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    transition: color 0.15s;
+  }
+  .filter-bar-clear:hover { color: #ffe9ce; }
+
+  /* ── Note count line ─────────────────────────────────────────── */
+  .note-count {
+    font-size: 0.7rem;
+    color: rgba(255, 233, 206, 0.25);
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── Notes grid ──────────────────────────────────────────────── */
+  .notes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.1rem;
+  }
+  @media (max-width: 960px) {
+    .notes-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .notes-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Note card ───────────────────────────────────────────────── */
+  .note-card {
+    display: flex;
+    flex-direction: column;
+    padding: 1.35rem 1.4rem 1.15rem;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #04080f;
+    min-height: 170px;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .note-card::after {
+    /* subtle bottom edge line for depth */
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(4, 8, 15, 0.06);
+    border-radius: 0 0 6px 6px;
+  }
+  .note-card:hover {
+    transform: translateY(-4px) scale(1.012);
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
+  }
+  .note-card:active { transform: scale(0.985); transition-duration: 0.08s; }
+
+  .note-card--cream { background: #ffe9ce; }
+  .note-card--peach { background: #ffcfc8; }
+
+  /* .note-card-heading {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #04080f;
+    line-height: 1.35;
+    margin-bottom: 0.55rem;
+    word-break: break-word; */
+    /* clamp to 2 lines */
+    /* display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  } */
+
+  .note-card-heading {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #04080f;
+    line-height: 1.35;
+    margin-bottom: 0.55rem;
+    word-break: break-word;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+
+    overflow: hidden;
+}
+
+  .note-card-body {
+    font-size: 0.76rem;
+    color: rgba(4, 8, 15, 0.52);
+    line-height: 1.65;
+    flex: 1;
+    word-break: break-word;
+  }
+  .note-card-body.is-empty {
+    color: rgba(4, 8, 15, 0.22);
+    font-style: italic;
+  }
+
+  .note-card-footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .note-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.28rem;
+    flex: 1;
+    min-width: 0;
+  }
+  /* Override global tag-badge inside a card — no hover cursor, smaller */
+  .note-card .tag-badge {
+    font-size: 0.62rem;
+    padding: 0.1rem 0.38rem;
+    pointer-events: none;
+    user-select: none;
+  }
+  .note-card-date {
+    font-size: 0.63rem;
+    color: rgba(4, 8, 15, 0.35);
+    white-space: nowrap;
+    flex-shrink: 0;
+    align-self: flex-end;
+  }
+
+  /* ── Loading state ───────────────────────────────────────────── */
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 45vh;
+    gap: 1rem;
+    color: rgba(255, 233, 206, 0.3);
+    font-size: 0.78rem;
+  }
+  .spinner-lg {
+    width: 26px;
+    height: 26px;
+    border: 2px solid rgba(155, 150, 225, 0.18);
+    border-top-color: #9b96e1;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+  }
+
+  /* ── Empty state ─────────────────────────────────────────────── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 45vh;
+    gap: 0.85rem;
+    text-align: center;
+    padding: 2rem;
+  }
+  .empty-glyph {
+    font-size: 2.2rem;
+    line-height: 1;
+    opacity: 0.2;
+    user-select: none;
+  }
+  .empty-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(255, 233, 206, 0.4);
+    margin: 0;
+  }
+  .empty-sub {
+    font-size: 0.74rem;
+    color: rgba(255, 233, 206, 0.22);
+    max-width: 260px;
+    line-height: 1.65;
+    margin: 0;
+  }
+  .empty-cta {
+    display: inline-block;
+    margin-top: 0.4rem;
+    padding: 0.5rem 1.15rem;
+    background: #3777ff;
+    color: #ffffff;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .empty-cta:hover { background: #255de0; }
+
+  /* ── Error state ─────────────────────────────────────────────── */
+  .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 45vh;
+    gap: 0.85rem;
+    text-align: center;
+    padding: 2rem;
+  }
+  .error-msg {
+    font-size: 0.78rem;
+    color: #ffb5c2;
+    max-width: 320px;
+    line-height: 1.6;
+    margin: 0;
+  }
+  .retry-btn {
+    background: none;
+    border: 1px solid rgba(155, 150, 225, 0.35);
+    color: #9b96e1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem;
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .retry-btn:hover { border-color: #9b96e1; color: #ffe9ce; }
+
+  /* ── FAB ─────────────────────────────────────────────────────── */
+  .fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #3777ff;
+    color: #ffffff;
+    font-size: 1.7rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    box-shadow: 0 4px 20px rgba(55, 119, 255, 0.42);
+    transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    z-index: 50;
+    user-select: none;
+    padding-bottom: 2px; /* optical centre for + glyph */
+  }
+  .fab:hover {
+    background: #255de0;
+    transform: scale(1.1);
+    box-shadow: 0 6px 28px rgba(55, 119, 255, 0.6);
+  }
+  .fab:active { transform: scale(0.95); transition-duration: 0.08s; }
+
+  @media (max-width: 560px) {
+    .index-root { padding: 1.5rem 1rem 5rem; }
+    .fab { bottom: 1.25rem; right: 1.25rem; width: 46px; height: 46px; font-size: 1.5rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="index-root">
+
+  <!-- Tag filter indicator -->
+  <div class="filter-bar" id="filter-bar">
+    <span class="filter-bar-label">showing notes tagged</span>
+    <span class="filter-bar-tag" id="filter-bar-tag"></span>
+    <button class="filter-bar-clear" id="filter-clear-btn">clear filter</button>
+  </div>
+
+  <!-- Dynamic content: loading / error / empty / grid -->
+  <div id="content-area"></div>
+
+</div>
+
+<!-- Floating action button -->
+<a href="/create" class="fab" aria-label="Create new note" title="New note">+</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Auth guard ────────────────────────────────────────────────────
+  (function () {
+    if (!getToken()) window.location.replace('/login');
+  })();
+
+  // ── Read URL state ────────────────────────────────────────────────
+  const urlParams  = new URLSearchParams(window.location.search);
+  const activeTag  = (urlParams.get('tag') || '').trim();
+
+  // ── DOM refs ──────────────────────────────────────────────────────
+  const contentArea   = document.getElementById('content-area');
+  const filterBar     = document.getElementById('filter-bar');
+  const filterBarTag  = document.getElementById('filter-bar-tag');
+  const filterClearBtn = document.getElementById('filter-clear-btn');
+
+  // ── Filter bar setup ──────────────────────────────────────────────
+  if (activeTag) {
+    filterBar.classList.add('active');
+    filterBarTag.textContent = activeTag;
+  }
+  filterClearBtn.addEventListener('click', () => {
+    window.location.href = '/';
+  });
+
+  // ── Utility: XSS-safe string escape ──────────────────────────────
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,  '&amp;')
+      .replace(/</g,  '&lt;')
+      .replace(/>/g,  '&gt;')
+      .replace(/"/g,  '&quot;')
+      .replace(/'/g,  '&#39;');
+  }
+
+  // ── Utility: truncate body for card preview ───────────────────────
+  function preview(str, max) {
+    if (!str) return '';
+    // Collapse newlines and excess whitespace for a clean one-liner
+    const flat = str.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+    return flat.length > max ? flat.slice(0, max).trimEnd() + '…' : flat;
+  }
+
+  // ── Render: loading ───────────────────────────────────────────────
+  function renderLoading() {
+    contentArea.innerHTML = `
+      <div class="loading-state" aria-live="polite" aria-label="Loading notes">
+        <div class="spinner-lg" role="status"></div>
+        <span>loading notes...</span>
+      </div>
+    `;
+  }
+
+  // ── Render: error ─────────────────────────────────────────────────
+  function renderError(message) {
+    contentArea.innerHTML = `
+      <div class="error-state" role="alert">
+        <p class="error-msg">${esc(message)}</p>
+        <button class="retry-btn" id="retry-btn">try again</button>
+      </div>
+    `;
+    document.getElementById('retry-btn').addEventListener('click', loadNotes);
+  }
+
+  // ── Render: empty ─────────────────────────────────────────────────
+  function renderEmpty() {
+    if (activeTag) {
+      contentArea.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-glyph">🏷</div>
+          <p class="empty-title">no notes tagged &ldquo;${esc(activeTag)}&rdquo;</p>
+          <p class="empty-sub">try a different tag, or clear the filter to see everything.</p>
+          <button class="empty-cta" onclick="window.location.href='/'">show all notes</button>
+        </div>
+      `;
+    } else {
+      contentArea.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-glyph">📝</div>
+          <p class="empty-title">no notes yet.</p>
+          <p class="empty-sub">create your first note — it&rsquo;ll show up here.</p>
+          <a href="/create" class="empty-cta">new note</a>
+        </div>
+      `;
+    }
+  }
+
+  // ── Render: note grid ─────────────────────────────────────────────
+  function renderGrid(notes) {
+    const total      = notes.length;
+    const countLabel = activeTag
+      ? `${total} note${total !== 1 ? 's' : ''} tagged &ldquo;${esc(activeTag)}&rdquo;`
+      : `${total} note${total !== 1 ? 's' : ''}`;
+
+    const cards = notes.map((note, i) => {
+      const shade   = i % 2 === 0 ? 'note-card--cream' : 'note-card--peach';
+      const heading = note.heading ? esc(note.heading) : '<em style="opacity:.4">untitled</em>';
+      const bodyTxt = preview(note.body, 120);
+      const bodyHtml = bodyTxt
+        ? `<div class="note-card-body">${esc(bodyTxt)}</div>`
+        : `<div class="note-card-body is-empty">empty note</div>`;
+
+      const tagsHtml = (note.tags || [])
+        .map(t => `<span class="tag-badge">${esc(t.tagname)}</span>`)
+        .join('');
+
+      const dateStr = formatDate(note.date_created);
+
+      return `
+        <a
+          href="/notes/${note.id}"
+          class="note-card ${shade}"
+          aria-label="Open: ${note.heading ? esc(note.heading) : 'untitled note'}"
+        >
+          <div class="note-card-heading">${heading}</div>
+          ${bodyHtml}
+          <div class="note-card-footer">
+            <div class="note-card-tags">${tagsHtml}</div>
+            <div class="note-card-date">${dateStr}</div>
+          </div>
+        </a>
+      `;
+    }).join('');
+
+    contentArea.innerHTML = `
+      <div class="note-count">${countLabel}</div>
+      <div class="notes-grid" role="list">${cards}</div>
+    `;
+  }
+
+  // ── Data fetch ────────────────────────────────────────────────────
+  async function loadNotes() {
+    renderLoading();
+
+    const endpoint = activeTag
+      ? `/api/notes?tag=${encodeURIComponent(activeTag)}`
+      : '/api/notes';
+
+    try {
+      const res = await authFetch(endpoint);
+      if (!res) return; // 401 → redirect already fired
+
+      if (!res.ok) {
+        let detail = `Failed to load notes (${res.status}).`;
+        try { const e = await res.json(); if (e.detail) detail = e.detail; } catch {}
+        renderError(detail);
+        return;
+      }
+
+      const notes = await res.json();
+
+      if (!Array.isArray(notes) || notes.length === 0) {
+        renderEmpty();
+      } else {
+        renderGrid(notes);
+      }
+
+    } catch (err) {
+      console.error('loadNotes error:', err);
+      renderError('Network error — check your connection and try again.');
+    }
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────
+  loadNotes();
+</script>
+{% endblock %}

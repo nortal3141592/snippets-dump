@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ error_code }} — snippets-dump</title>
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #04080f;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+    }
+
+    /* Subtle animated noise texture on the background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .error-code {
+      font-size: clamp(6rem, 22vw, 12rem);
+      font-weight: 700;
+      color: #ffe156;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      /* Subtle glow matching the yellow */
+      text-shadow: 0 0 80px rgba(255, 225, 86, 0.18), 0 0 20px rgba(255, 225, 86, 0.08);
+      user-select: none;
+    }
+
+    .home-link {
+      color: #3777ff;
+      text-decoration: none;
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.15s ease, color 0.15s ease;
+    }
+    .home-link:hover {
+      border-bottom-color: #3777ff;
+      color: #6696ff;
+    }
+
+    /* Divider line between code and message */
+    .divider {
+      width: 2rem;
+      height: 2px;
+      background-color: #9b96e1;
+      border-radius: 2px;
+      margin: 1.5rem auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 text-center">
+
+    <!-- App name, small, at top -->
+    <a href="/"
+       style="color: #9b96e1; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; margin-bottom: 4rem; opacity: 0.7;"
+       class="hover:opacity-100 transition-opacity duration-150">
+      snippets-dump
+    </a>
+
+    <!-- Error code -->
+    <div class="error-code">{{ error_code }}</div>
+
+    <!-- Divider -->
+    <div class="divider"></div>
+
+    <!-- Error message -->
+    <p style="color: #ffe9ce; font-size: 1rem; max-width: 30ch; line-height: 1.6; margin-bottom: 2.5rem;">
+      {{ error_message }}
+    </p>
+
+    <!-- Home link -->
+    <a href="/" class="home-link">← go home</a>
+
+  </div>
+</body>
+</html>

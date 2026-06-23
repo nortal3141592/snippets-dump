@@ -1,0 +1,431 @@
+{% extends "layout.html" %}
+
+{# Hide the navbar on the register page #}
+{% block navbar %}{% endblock %}
+
+{% block title %}snippets-dump — create account{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Register page layout ────────────────────────────────────── */
+  .reg-root {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: #04080f;
+  }
+
+  /* ── Card ────────────────────────────────────────────────────── */
+  .reg-card {
+    width: 100%;
+    max-width: 400px;
+    background: #ffe9ce;
+    color: #04080f;
+    border-radius: 6px;
+    padding: 2.75rem 2.5rem 2.25rem;
+    box-shadow:
+      0 0 0 1px rgba(155, 150, 225, 0.18),
+      0 8px 40px rgba(0, 0, 0, 0.55);
+  }
+
+  /* ── Card header ─────────────────────────────────────────────── */
+  .reg-logo {
+    font-size: 2.1rem;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    color: #04080f;
+    margin: 0 0 0.3rem;
+    line-height: 1;
+  }
+  .reg-tagline {
+    font-size: 0.75rem;
+    color: rgba(4, 8, 15, 0.45);
+    margin: 0 0 2.25rem;
+    font-weight: 400;
+  }
+
+  /* ── Form fields ─────────────────────────────────────────────── */
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+    margin-bottom: 1.6rem;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .field label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(4, 8, 15, 0.6);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .field input {
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid rgba(4, 8, 15, 0.22);
+    color: #04080f;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88rem;
+    padding: 0.4rem 0.1rem;
+    transition: border-color 0.18s;
+    width: 100%;
+  }
+  .field input::placeholder {
+    color: rgba(4, 8, 15, 0.3);
+  }
+  .field input:focus {
+    outline: none;
+    border-bottom-color: #3777ff;
+  }
+  .field input:focus-visible {
+    outline: none;
+  }
+
+  /* Per-field validation hint */
+  .field-hint {
+    font-size: 0.68rem;
+    color: rgba(4, 8, 15, 0.4);
+    margin-top: 0.15rem;
+    display: none;
+  }
+  .field.has-error input {
+    border-bottom-color: #c0392b;
+  }
+  .field.has-error .field-hint {
+    display: block;
+    color: #7a1a1a;
+  }
+
+  /* ── Submit button ───────────────────────────────────────────── */
+  .reg-btn {
+    width: 100%;
+    padding: 0.65rem 1rem;
+    background: #3777ff;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.12s, opacity 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    letter-spacing: 0.02em;
+  }
+  .reg-btn:hover:not(:disabled) { background: #255de0; }
+  .reg-btn:active:not(:disabled) { transform: scale(0.98); }
+  .reg-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .reg-btn .spinner {
+    border-color: rgba(255, 255, 255, 0.25);
+    border-top-color: #ffffff;
+  }
+
+  /* ── Inline error (API-level) ────────────────────────────────── */
+  .reg-error {
+    display: none;
+    background: #ffb5c2;
+    color: #04080f;
+    font-size: 0.77rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1.1rem;
+    line-height: 1.45;
+  }
+  .reg-error.visible { display: block; }
+
+  /* ── Success message ─────────────────────────────────────────── */
+  .reg-success {
+    display: none;
+    background: #ffe9ce;
+    border: 1.5px solid #3777ff;
+    color: #04080f;
+    font-size: 0.77rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1.1rem;
+    line-height: 1.45;
+  }
+  .reg-success.visible { display: block; }
+
+  /* ── Footer link ─────────────────────────────────────────────── */
+  .reg-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.75rem;
+    color: rgba(4, 8, 15, 0.45);
+  }
+  .reg-footer a {
+    color: #3777ff;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+  .reg-footer a:hover { color: #255de0; text-decoration: underline; }
+
+  .card-divider {
+    height: 1px;
+    background: rgba(4, 8, 15, 0.1);
+    margin: 2rem 0 1.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reg-root">
+  <div class="reg-card">
+
+    <!-- Header -->
+    <p class="reg-logo">snippets-dump</p>
+    <p class="reg-tagline">a place for your thoughts.</p>
+
+    <!-- API-level error -->
+    <div class="reg-error" id="reg-error" role="alert"></div>
+
+    <!-- Success (briefly shown before redirect) -->
+    <div class="reg-success" id="reg-success" role="status"></div>
+
+    <!-- Form fields -->
+    <div class="field-group" id="reg-form">
+
+      <div class="field" id="field-username">
+        <label for="reg-username">username</label>
+        <input
+          id="reg-username"
+          type="text"
+          placeholder="yourname"
+          autocomplete="username"
+          maxlength="40"
+          required
+        />
+        <span class="field-hint" id="hint-username"></span>
+      </div>
+
+      <div class="field" id="field-email">
+        <label for="reg-email">email</label>
+        <input
+          id="reg-email"
+          type="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+          required
+        />
+        <span class="field-hint" id="hint-email"></span>
+      </div>
+
+      <div class="field" id="field-password">
+        <label for="reg-password">password</label>
+        <input
+          id="reg-password"
+          type="password"
+          placeholder="at least 8 characters"
+          autocomplete="new-password"
+          required
+        />
+        <span class="field-hint" id="hint-password"></span>
+      </div>
+
+    </div>
+
+    <button class="reg-btn" id="reg-btn" type="button">
+      create account
+    </button>
+
+    <div class="card-divider"></div>
+
+    <p class="reg-footer">
+      already have an account?&nbsp;
+      <a href="/login">sign in</a>
+    </p>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── If already authenticated, skip straight to the app ──────────
+  (function () {
+    if (localStorage.getItem('access_token')) {
+      window.location.replace('/');
+    }
+  })();
+
+  // ── DOM refs ─────────────────────────────────────────────────────
+  const usernameInput = document.getElementById('reg-username');
+  const emailInput    = document.getElementById('reg-email');
+  const passwordInput = document.getElementById('reg-password');
+  const regBtn        = document.getElementById('reg-btn');
+  const errorBox      = document.getElementById('reg-error');
+  const successBox    = document.getElementById('reg-success');
+
+  // Field wrapper refs (for per-field error states)
+  const fieldUsername = document.getElementById('field-username');
+  const fieldEmail    = document.getElementById('field-email');
+  const fieldPassword = document.getElementById('field-password');
+  const hintUsername  = document.getElementById('hint-username');
+  const hintEmail     = document.getElementById('hint-email');
+  const hintPassword  = document.getElementById('hint-password');
+
+  // ── Error helpers ─────────────────────────────────────────────────
+
+  function showApiError(msg) {
+    errorBox.textContent = msg;
+    errorBox.classList.add('visible');
+  }
+  function hideApiError() {
+    errorBox.textContent = '';
+    errorBox.classList.remove('visible');
+  }
+
+  function setFieldError(fieldEl, hintEl, msg) {
+    fieldEl.classList.add('has-error');
+    hintEl.textContent = msg;
+  }
+  function clearFieldError(fieldEl, hintEl) {
+    fieldEl.classList.remove('has-error');
+    hintEl.textContent = '';
+  }
+  function clearAllFieldErrors() {
+    clearFieldError(fieldUsername, hintUsername);
+    clearFieldError(fieldEmail, hintEmail);
+    clearFieldError(fieldPassword, hintPassword);
+  }
+
+  // ── Client-side validation ────────────────────────────────────────
+
+  function validate() {
+    clearAllFieldErrors();
+    let valid = true;
+
+    const username = usernameInput.value.trim();
+    const email    = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!username) {
+      setFieldError(fieldUsername, hintUsername, 'Username is required.');
+      valid = false;
+    } else if (username.length < 3) {
+      setFieldError(fieldUsername, hintUsername, 'At least 3 characters.');
+      valid = false;
+    } else if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
+      setFieldError(fieldUsername, hintUsername, 'Letters, numbers, _ . - only.');
+      valid = false;
+    }
+
+    if (!email) {
+      setFieldError(fieldEmail, hintEmail, 'Email is required.');
+      valid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFieldError(fieldEmail, hintEmail, 'Enter a valid email address.');
+      valid = false;
+    }
+
+    if (!password) {
+      setFieldError(fieldPassword, hintPassword, 'Password is required.');
+      valid = false;
+    } else if (password.length < 8) {
+      setFieldError(fieldPassword, hintPassword, 'At least 8 characters required.');
+      valid = false;
+    }
+
+    return valid;
+  }
+
+  // ── Submit handler ────────────────────────────────────────────────
+
+  async function handleRegister() {
+    hideApiError();
+    successBox.classList.remove('visible');
+
+    if (!validate()) return;
+
+    const restore = setButtonLoading(regBtn, 'creating account...');
+
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: usernameInput.value.trim(),
+          email:    emailInput.value.trim(),
+          password: passwordInput.value,
+        }),
+      });
+
+      if (res.ok || res.status === 201) {
+        // Show brief success message, then redirect to login
+        successBox.textContent = 'Account created! Redirecting to sign in...';
+        successBox.classList.add('visible');
+        regBtn.disabled = true;
+        setTimeout(() => window.location.replace('/login'), 1200);
+        return;
+      }
+
+      // Parse error detail from API
+      let detail = 'Something went wrong. Please try again.';
+      try {
+        const err = await res.json();
+        if (err.detail) {
+          // FastAPI validation errors come as an array
+          if (Array.isArray(err.detail)) {
+            detail = err.detail.map((e) => e.msg).join(' ');
+          } else {
+            detail = String(err.detail);
+          }
+        }
+      } catch { /* unparseable — use default */ }
+
+      // Surface common conflicts as field-level errors
+      const lowerDetail = detail.toLowerCase();
+      if (lowerDetail.includes('email') && lowerDetail.includes('already')) {
+        setFieldError(fieldEmail, hintEmail, 'This email is already registered.');
+      } else if (lowerDetail.includes('username') && lowerDetail.includes('already')) {
+        setFieldError(fieldUsername, hintUsername, 'This username is taken.');
+      } else {
+        showApiError(detail);
+      }
+
+    } catch (err) {
+      showApiError('Network error — check your connection and try again.');
+      console.error('Register error:', err);
+    } finally {
+      restore();
+    }
+  }
+
+  // ── Event listeners ───────────────────────────────────────────────
+
+  regBtn.addEventListener('click', handleRegister);
+
+  // Submit with Enter from any field
+  [usernameInput, emailInput, passwordInput].forEach((el) => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleRegister();
+    });
+  });
+
+  // Clear field-level errors as the user edits each input
+  usernameInput.addEventListener('input', () => {
+    clearFieldError(fieldUsername, hintUsername);
+    hideApiError();
+  });
+  emailInput.addEventListener('input', () => {
+    clearFieldError(fieldEmail, hintEmail);
+    hideApiError();
+  });
+  passwordInput.addEventListener('input', () => {
+    clearFieldError(fieldPassword, hintPassword);
+    hideApiError();
+  });
+</script>
+{% endblock %}
